@@ -257,9 +257,35 @@ fn redraw_containers(
       },
     );
 
-    let rect = window
-      .to_rect()?
-      .apply_delta(&window.total_border_delta()?, None);
+    let layout_rect = window.to_rect()?;
+    let border_delta = window.total_border_delta()?;
+    let monitor = window.monitor().context("Window has no monitor.")?;
+    let native_monitor = monitor.native();
+    let monitor_rect = native_monitor.rect()?;
+
+    // Important: Do not apply border/shadow deltas to fullscreen windows.
+    // Applying deltas here expands the rect beyond the monitor bounds and
+    // can cause cross-monitor spillover and incorrect fullscreen
+    // detection.
+    let rect = match window.state() {
+      WindowState::Fullscreen(_) => layout_rect,
+      _ => {
+        // Pre-constrain layout to ensure borders fit within monitor bounds
+        // Calculate the maximum size the content can be to fit borders
+        // within monitor
+        let max_content_rect =
+          monitor_rect.apply_inverse_delta(&border_delta, None);
+        let constrained_layout =
+          layout_rect.clamp_within_bounds(&max_content_rect);
+
+        // Now apply border delta to the constrained layout - guaranteed to
+        // fit
+        let final_rect =
+          constrained_layout.apply_delta(&border_delta, None);
+
+        final_rect
+      }
+    };
 
     let is_visible = matches!(
       window.display_state(),
@@ -278,6 +304,10 @@ fn redraw_containers(
     ) {
       warn!("Failed to set window position: {}", err);
     }
+
+    // Note: Don't clear pending fullscreen transition flag here.
+    // Let handle_window_location_changed clear it when the transition is
+    // complete.
 
     // Whether the window is either transitioning to or from fullscreen.
     // TODO: This check can be improved since `prev_state` can be

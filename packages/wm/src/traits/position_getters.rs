@@ -39,8 +39,40 @@ macro_rules! impl_position_getters_as_resizable {
             let available_height = parent_rect.height()
               - inner_gap * self.tiling_siblings().count() as i32;
 
-            let height =
+            // Provisional height based on tiling_size.
+            let mut height =
               (self.tiling_size() * available_height as f32) as i32;
+
+            // If this is the last tiling sibling in a vertical split,
+            // fill the remaining space exactly to avoid rounding gaps.
+            let is_last = self
+              .next_siblings()
+              .filter_map(|s| s.as_tiling_container().ok())
+              .next()
+              .is_none();
+
+            let (x, y) = {
+              let mut prev_siblings = self
+                .prev_siblings()
+                .filter_map(|sibling| sibling.as_tiling_container().ok());
+
+              match prev_siblings.next() {
+                None => (parent_rect.x(), parent_rect.y()),
+                Some(sibling) => {
+                  let sibling_rect = sibling.to_rect()?;
+
+                  (
+                    parent_rect.x(),
+                    sibling_rect.y() + sibling_rect.height() + inner_gap,
+                  )
+                }
+              }
+            };
+
+            if is_last {
+              // Height = bottom of parent - our y
+              height = parent_rect.bottom - y;
+            }
 
             (parent_rect.width(), height)
           }
@@ -48,13 +80,46 @@ macro_rules! impl_position_getters_as_resizable {
             let available_width = parent_rect.width()
               - inner_gap * self.tiling_siblings().count() as i32;
 
-            let width =
+            // Provisional width based on tiling_size with rounding.
+            let mut width =
               (available_width as f32 * self.tiling_size()).round() as i32;
+
+            // If this is the last tiling sibling in a horizontal split,
+            // fill the remaining space exactly to avoid rounding gaps.
+            let is_last = self
+              .next_siblings()
+              .filter_map(|s| s.as_tiling_container().ok())
+              .next()
+              .is_none();
+
+            let (x, y) = {
+              let mut prev_siblings = self
+                .prev_siblings()
+                .filter_map(|sibling| sibling.as_tiling_container().ok());
+
+              match prev_siblings.next() {
+                None => (parent_rect.x(), parent_rect.y()),
+                Some(sibling) => {
+                  let sibling_rect = sibling.to_rect()?;
+
+                  (
+                    sibling_rect.x() + sibling_rect.width() + inner_gap,
+                    parent_rect.y(),
+                  )
+                }
+              }
+            };
+
+            if is_last {
+              // Width = right of parent - our x
+              width = parent_rect.right - x;
+            }
 
             (width, parent_rect.height())
           }
         };
 
+        // Recompute position to return with the final width/height.
         let (x, y) = {
           let mut prev_siblings = self
             .prev_siblings()

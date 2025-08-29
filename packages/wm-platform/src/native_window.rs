@@ -803,17 +803,27 @@ impl NativeWindow {
         // move. If we set the position twice, inconsistencies after the
         // first move are resolved.
         if has_pending_dpi_adjustment {
-          unsafe {
-            SetWindowPos(
-              HWND(self.handle),
-              z_order,
-              rect.x(),
-              rect.y(),
-              rect.width(),
-              rect.height(),
-              swp_flags,
-            )
-          }?;
+          // Validate coordinates are within reasonable bounds before
+          // second adjustment
+          if rect.x() >= -32768
+            && rect.x() <= 32767
+            && rect.y() >= -32768
+            && rect.y() <= 32767
+            && rect.width() > 0
+            && rect.height() > 0
+          {
+            unsafe {
+              SetWindowPos(
+                HWND(self.handle),
+                z_order,
+                rect.x(),
+                rect.y(),
+                rect.width(),
+                rect.height(),
+                swp_flags,
+              )
+            }?;
+          }
         }
       }
     }
