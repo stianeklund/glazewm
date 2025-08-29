@@ -264,7 +264,8 @@ fn redraw_containers(
     // Clamp window rect to its monitor's working area to prevent spillover
     // onto adjacent monitors, especially on mixed-resolution setups.
     let monitor = window.monitor().context("Window has no monitor.")?;
-    let working_rect = monitor.native().working_rect()?;
+    let native_monitor = monitor.native();
+    let working_rect = native_monitor.working_rect()?;
     let rect = original_rect.clamp_within_bounds(working_rect);
 
     // Log geometry information for debugging mixed-resolution issues
@@ -274,9 +275,9 @@ fn redraw_containers(
         original_rect = ?original_rect,
         clamped_rect = ?rect,
         working_rect = ?working_rect,
-        monitor_handle = monitor.native().handle,
-        monitor_dpi = monitor.native().dpi().unwrap_or(96),
-        monitor_scale = monitor.native().scale_factor().unwrap_or(1.0),
+        monitor_handle = native_monitor.handle,
+        monitor_dpi = native_monitor.dpi().unwrap_or(96),
+        monitor_scale = native_monitor.scale_factor().unwrap_or(1.0),
         "Window rect clamped to monitor bounds"
       );
     }
