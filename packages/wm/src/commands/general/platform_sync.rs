@@ -257,9 +257,29 @@ fn redraw_containers(
       },
     );
 
-    let rect = window
+    let original_rect = window
       .to_rect()?
       .apply_delta(&window.total_border_delta()?, None);
+
+    // Clamp window rect to its monitor's working area to prevent spillover
+    // onto adjacent monitors, especially on mixed-resolution setups.
+    let monitor = window.monitor().context("Window has no monitor.")?;
+    let working_rect = monitor.native().working_rect()?;
+    let rect = original_rect.clamp_within_bounds(working_rect);
+
+    // Log geometry information for debugging mixed-resolution issues
+    if original_rect != rect {
+      info!(
+        window_id = %window.id(),
+        original_rect = ?original_rect,
+        clamped_rect = ?rect,
+        working_rect = ?working_rect,
+        monitor_handle = monitor.native().handle,
+        monitor_dpi = monitor.native().dpi().unwrap_or(96),
+        monitor_scale = monitor.native().scale_factor().unwrap_or(1.0),
+        "Window rect clamped to monitor bounds"
+      );
+    }
 
     let is_visible = matches!(
       window.display_state(),
