@@ -41,6 +41,7 @@ struct TilingWindowInner {
   display_state: DisplayState,
   border_delta: RectDelta,
   has_pending_dpi_adjustment: bool,
+  has_pending_fullscreen_transition: bool,
   floating_placement: Rect,
   has_custom_floating_placement: bool,
   gaps_config: GapsConfig,
@@ -73,6 +74,7 @@ impl TilingWindow {
       display_state: DisplayState::Shown,
       border_delta,
       has_pending_dpi_adjustment: false,
+      has_pending_fullscreen_transition: false,
       floating_placement,
       has_custom_floating_placement,
       gaps_config,
@@ -88,6 +90,12 @@ impl TilingWindow {
     state: WindowState,
     insertion_target: Option<InsertionTarget>,
   ) -> NonTilingWindow {
+    // Use current tiled dimensions instead of stored floating_placement
+    // to prevent windows from using more vertical space after
+    // tiling->floating transition
+    let current_placement =
+      self.to_rect().unwrap_or_else(|_| self.floating_placement());
+
     NonTilingWindow::new(
       Some(self.id()),
       self.native().clone(),
@@ -95,7 +103,7 @@ impl TilingWindow {
       Some(WindowState::Tiling),
       self.border_delta(),
       insertion_target,
-      self.floating_placement(),
+      current_placement,
       self.has_custom_floating_placement(),
       self.done_window_rules(),
       self.active_drag(),
