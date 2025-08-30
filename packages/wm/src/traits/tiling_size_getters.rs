@@ -34,10 +34,10 @@ pub trait TilingSizeGetters: CommonGetters {
     Ok((
       gaps_config
         .inner_gap
-        .to_px(monitor_rect.height(), Some(scale_factor)),
+        .to_px(monitor_rect.width(), Some(scale_factor)),
       gaps_config
         .inner_gap
-        .to_px(monitor_rect.width(), Some(scale_factor)),
+        .to_px(monitor_rect.height(), Some(scale_factor)),
     ))
   }
 
