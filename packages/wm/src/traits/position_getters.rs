@@ -23,6 +23,8 @@ macro_rules! impl_position_getters_as_resizable {
 
         let parent_rect = parent.to_rect()?;
 
+        // Parent rect logging removed for clarity
+
         let (horizontal_gap, vertical_gap) = self.inner_gaps()?;
         let inner_gap = match parent.tiling_direction() {
           TilingDirection::Vertical => vertical_gap,
@@ -36,12 +38,15 @@ macro_rules! impl_position_getters_as_resizable {
         )]
         let (width, height) = match parent.tiling_direction() {
           TilingDirection::Vertical => {
-            let available_height = parent_rect.height()
-              - inner_gap * self.tiling_siblings().count() as i32;
+            let sibling_count = self.tiling_siblings().count() as i32;
+            let available_height =
+              parent_rect.height() - inner_gap * sibling_count;
 
-            // Provisional height based on tiling_size.
-            let mut height =
-              (self.tiling_size() * available_height as f32) as i32;
+            // Provisional height based on tiling_size with rounding.
+            let mut height = (available_height as f32 * self.tiling_size())
+              .round() as i32;
+
+            // Vertical tiling logging removed for clarity
 
             // If this is the last tiling sibling in a vertical split,
             // fill the remaining space exactly to avoid rounding gaps.
@@ -51,7 +56,7 @@ macro_rules! impl_position_getters_as_resizable {
               .next()
               .is_none();
 
-            let (x, y) = {
+            let (_x, y) = {
               let mut prev_siblings = self
                 .prev_siblings()
                 .filter_map(|sibling| sibling.as_tiling_container().ok());
@@ -77,8 +82,10 @@ macro_rules! impl_position_getters_as_resizable {
             (parent_rect.width(), height)
           }
           TilingDirection::Horizontal => {
-            let available_width = parent_rect.width()
-              - inner_gap * self.tiling_siblings().count() as i32;
+            let sibling_count = self.tiling_siblings().count() as i32;
+            let _total_tiling_containers = sibling_count + 1;
+            let available_width =
+              parent_rect.width() - inner_gap * sibling_count;
 
             // Provisional width based on tiling_size with rounding.
             let mut width =
@@ -92,7 +99,7 @@ macro_rules! impl_position_getters_as_resizable {
               .next()
               .is_none();
 
-            let (x, y) = {
+            let (x, _y) = {
               let mut prev_siblings = self
                 .prev_siblings()
                 .filter_map(|sibling| sibling.as_tiling_container().ok());
@@ -110,6 +117,7 @@ macro_rules! impl_position_getters_as_resizable {
               }
             };
 
+            let _original_width = width;
             if is_last {
               // Width = right of parent - our x
               width = parent_rect.right - x;
@@ -130,21 +138,27 @@ macro_rules! impl_position_getters_as_resizable {
             Some(sibling) => {
               let sibling_rect = sibling.to_rect()?;
 
-              match parent.tiling_direction() {
-                TilingDirection::Vertical => (
-                  parent_rect.x(),
-                  sibling_rect.y() + sibling_rect.height() + inner_gap,
-                ),
-                TilingDirection::Horizontal => (
-                  sibling_rect.x() + sibling_rect.width() + inner_gap,
-                  parent_rect.y(),
-                ),
-              }
+              let final_x = match parent.tiling_direction() {
+                TilingDirection::Vertical => parent_rect.x(),
+                TilingDirection::Horizontal => {
+                  sibling_rect.x() + sibling_rect.width() + inner_gap
+                }
+              };
+              let final_y = match parent.tiling_direction() {
+                TilingDirection::Vertical => {
+                  sibling_rect.y() + sibling_rect.height() + inner_gap
+                }
+                TilingDirection::Horizontal => parent_rect.y(),
+              };
+
+              (final_x, final_y)
             }
           }
         };
 
-        Ok(Rect::from_xy(x, y, width, height))
+        let final_rect = Rect::from_xy(x, y, width, height);
+
+        Ok(final_rect)
       }
     }
   };
