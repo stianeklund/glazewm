@@ -97,6 +97,13 @@ pub trait WindowGetters {
     has_pending_dpi_adjustment: bool,
   );
 
+  fn has_pending_fullscreen_transition(&self) -> bool;
+
+  fn set_has_pending_fullscreen_transition(
+    &self,
+    has_pending_fullscreen_transition: bool,
+  );
+
   fn floating_placement(&self) -> Rect;
 
   fn set_floating_placement(&self, floating_placement: Rect);
@@ -124,7 +131,8 @@ pub trait WindowGetters {
 ///
 /// Expects that the struct has a wrapping `RefCell` containing a struct
 /// with a `state`, `prev_state`, `native`, `has_pending_dpi_adjustment`,
-/// `border_delta`, `display_state`, and a `done_window_rules` field.
+/// `has_pending_fullscreen_transition`, `border_delta`, `display_state`,
+/// and a `done_window_rules` field.
 #[macro_export]
 macro_rules! impl_window_getters {
   ($struct_name:ident) => {
@@ -175,6 +183,18 @@ macro_rules! impl_window_getters {
       ) {
         self.0.borrow_mut().has_pending_dpi_adjustment =
           has_pending_dpi_adjustment;
+      }
+
+      fn has_pending_fullscreen_transition(&self) -> bool {
+        self.0.borrow().has_pending_fullscreen_transition
+      }
+
+      fn set_has_pending_fullscreen_transition(
+        &self,
+        has_pending_fullscreen_transition: bool,
+      ) {
+        self.0.borrow_mut().has_pending_fullscreen_transition =
+          has_pending_fullscreen_transition;
       }
 
       fn floating_placement(&self) -> Rect {

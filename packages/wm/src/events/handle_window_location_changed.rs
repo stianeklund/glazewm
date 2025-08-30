@@ -83,10 +83,25 @@ pub fn handle_window_location_changed(
 
     match window.state() {
       WindowState::Fullscreen(fullscreen_state) => {
-        // Restore the window if it's no longer fullscreen *or* for the
-        // edge case of fullscreen -> maximized -> restore from maximized.
-        if (fullscreen_state.maximized || !is_fullscreen) && !is_maximized
+        // Handle pending fullscreen transitions
+        let should_restore = if window.has_pending_fullscreen_transition()
         {
+          // Check if fullscreen transition completed successfully
+          if is_fullscreen || is_maximized {
+            // Transition succeeded, clear the flag
+            window.set_has_pending_fullscreen_transition(false);
+            false // Don't restore - we successfully went fullscreen
+          } else {
+            // Transition may still be in progress, don't restore yet
+            false
+          }
+        } else if fullscreen_state.maximized {
+          !is_maximized
+        } else {
+          !is_maximized && !is_fullscreen
+        };
+
+        if should_restore {
           info!("Window restored from fullscreen: {window}");
 
           let target_state = window

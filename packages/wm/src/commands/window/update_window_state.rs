@@ -143,6 +143,14 @@ fn set_non_tiling(
     WindowContainer::NonTilingWindow(window) => {
       let current_state = window.state();
 
+      // Set pending fullscreen transition flag when transitioning TO
+      // fullscreen
+      if matches!(target_state, WindowState::Fullscreen(_))
+        && !matches!(current_state, WindowState::Fullscreen(_))
+      {
+        window.set_has_pending_fullscreen_transition(true);
+      }
+
       // Update the window's previous state if the discriminant changes.
       if !current_state.is_same_state(&target_state) {
         window.set_prev_state(current_state);
@@ -166,6 +174,12 @@ fn set_non_tiling(
           prev_sibling_count: window.tiling_siblings().count(),
         }),
       );
+
+      // Set pending fullscreen transition flag when transitioning TO
+      // fullscreen
+      if matches!(target_state, WindowState::Fullscreen(_)) {
+        non_tiling_window.set_has_pending_fullscreen_transition(true);
+      }
 
       // Non-tiling windows should always be direct children of the
       // workspace.
